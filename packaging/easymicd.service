@@ -1,0 +1,20 @@
+[Unit]
+Description=EasyMic Audio-Daemon
+Documentation=file://%h/.local/share/doc/easymic/README.md
+After=pipewire.service wireplumber.service pulseaudio.service
+Wants=pipewire.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/easymicd
+Restart=on-failure
+RestartSec=2
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Audio processes inherit the user session's PipeWire/PulseAudio socket.
+PassEnvironment=XDG_RUNTIME_DIR XDG_CONFIG_HOME XDG_STATE_HOME
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

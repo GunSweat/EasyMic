@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EasyMic.Cli/EasyMic.Cli.csproj" />
+    <Project Path="src/EasyMic.Core/EasyMic.Core.csproj" />
+    <Project Path="src/EasyMic.Daemon/EasyMic.Daemon.csproj" />
+  </Folder>
+</Solution>
