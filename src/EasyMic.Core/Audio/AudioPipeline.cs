@@ -203,7 +203,7 @@ public sealed class AudioPipeline : IAsyncDisposable
         {
             if (!_stopping)
             {
-                Failed?.Invoke($"Audioausgabe-Fehler: {FirstLine(exception.Message)}");
+                Failed?.Invoke($"Audio output error: {FirstLine(exception.Message)}");
             }
         }
     }

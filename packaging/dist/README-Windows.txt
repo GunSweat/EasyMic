@@ -1,12 +1,12 @@
-EasyMic für Windows (Kompilier-Build)
-===================================
+EasyMic for Windows (compile-only build)
+========================================
 
-Diese ZIP enthält easymic.exe als eigenständige Windows-Anwendung.
+This ZIP contains easymic.exe as a standalone Windows application.
 
-WICHTIG: Das ist derzeit nur ein Kompilier-Build. EasyMic nutzt für Audio
-PipeWire/PulseAudio und Linux-spezifische Schnittstellen (pactl, parec, pacat,
-libc, Unix-Sockets). Die Windows-EXE startet zwar, kann aber noch kein
-Mikrofon verarbeiten. Ein vollständiger Windows-Port (WASAPI + virtuelles
-Audio-Gerät) ist noch nicht enthalten.
+IMPORTANT: This is currently only a compile-only build. EasyMic uses
+PipeWire/PulseAudio and Linux-specific interfaces for audio (pactl, parec,
+pacat, libc, Unix sockets). The Windows executable starts, but it cannot
+process a microphone yet. A complete Windows port (WASAPI + virtual audio
+device) is not included.
 
-Der Linux-Build ist die funktionsfähige Version.
+The Linux build is the functional version.

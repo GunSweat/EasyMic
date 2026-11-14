@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version ohne v (z. B. 1.2.3)'
+        description: 'Version without v (e.g. 1.2.3)'
         required: true
         type: string
 
@@ -38,7 +38,7 @@ jobs:
           version="${{ github.event.inputs.version || github.ref_name }}"
           version="${version#v}"
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Ungültige Version '$version' – erwartet wird x.y.z" >&2
+            echo "Invalid version '$version' – expected x.y.z" >&2
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
@@ -114,7 +114,7 @@ jobs:
           version="${{ github.event.inputs.version || github.ref_name }}"
           version="${version#v}"
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Ungültige Version '$version' – erwartet wird x.y.z" >&2
+            echo "Invalid version '$version' – expected x.y.z" >&2
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"

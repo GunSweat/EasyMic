@@ -9,12 +9,12 @@ if (args.Length > 0)
     {
         case "-h":
         case "--help":
-            Console.WriteLine("easymicd – EasyMic-Audiodaemon");
+            Console.WriteLine("easymicd – EasyMic audio daemon");
             Console.WriteLine();
-            Console.WriteLine("Startet die Audioverarbeitung, das virtuelle Mikrofon und den IPC-Socket.");
-            Console.WriteLine("Der Daemon wird normalerweise über easymicd.service gestartet.");
+            Console.WriteLine("Starts audio processing, the virtual microphone and the IPC socket.");
+            Console.WriteLine("The daemon is normally started via easymicd.service.");
             Console.WriteLine();
-            Console.WriteLine("  --version   Version ausgeben");
+            Console.WriteLine("  --version   Print version");
             return 0;
 
         case "--version":
@@ -44,7 +44,7 @@ try
     if (error is not null)
     {
         Console.Error.WriteLine(error);
-        return error.Contains("läuft bereits", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+        return error.Contains("already running", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
     }
 
     await host.Shutdown;
@@ -56,6 +56,6 @@ catch (OperationCanceledException)
 }
 catch (Exception exception)
 {
-    Console.Error.WriteLine($"EasyMic-Daemon: {exception}");
+    Console.Error.WriteLine($"EasyMic daemon: {exception}");
     return 1;
 }

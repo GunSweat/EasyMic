@@ -2,7 +2,7 @@
 Type=Application
 Version=1.0
 Name=Open EasyMic
-Comment=Öffnet die EasyMic-Oberfläche
+Comment=Opens the EasyMic interface
 Exec=/usr/bin/easymic notify
 TryExec=/usr/bin/easymic
 Icon=audio-input-microphone

@@ -68,7 +68,7 @@ public sealed class VirtualMic : IAsyncDisposable
 
             if (mkfifo.ExitCode != 0)
             {
-                return Fail($"Virtuelles Mikrofon konnte nicht erstellt werden: {FirstLine(mkfifo.StdErr)}");
+                return Fail($"Virtual microphone could not be created: {FirstLine(mkfifo.StdErr)}");
             }
 
             var source = await Pactl.RunAsync(
@@ -85,7 +85,7 @@ public sealed class VirtualMic : IAsyncDisposable
                 !int.TryParse(source.StdOut.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var sourceModule))
             {
                 TryDeletePipe(fifo);
-                return Fail($"Virtuelles Mikrofon konnte nicht erstellt werden: {FirstLine(source.StdErr)}");
+                return Fail($"Virtual microphone could not be created: {FirstLine(source.StdErr)}");
             }
 
             _sourceModule = sourceModule;
@@ -95,7 +95,7 @@ public sealed class VirtualMic : IAsyncDisposable
                 await UnloadAsync(sourceModule).ConfigureAwait(false);
                 _sourceModule = null;
                 TryDeletePipe(fifo);
-                return Fail("Virtuelles Mikrofon wurde nicht rechtzeitig verfügbar.");
+                return Fail("Virtual microphone did not become available in time.");
             }
 
             IsAvailable = true;
@@ -105,7 +105,7 @@ public sealed class VirtualMic : IAsyncDisposable
         catch (Exception exception)
         {
             await StopAsync().ConfigureAwait(false);
-            return Fail($"Virtuelles Mikrofon konnte nicht erstellt werden: {exception.Message}");
+            return Fail($"Virtual microphone could not be created: {exception.Message}");
         }
     }
 
@@ -178,11 +178,11 @@ public sealed class VirtualMic : IAsyncDisposable
         }
         catch (IOException)
         {
-            return "EasyMic läuft bereits in einer anderen Instanz.";
+            return "EasyMic is already running in another instance.";
         }
         catch (UnauthorizedAccessException)
         {
-            return $"Sperrdatei konnte nicht geöffnet werden: {path}";
+            return $"Lock file could not be opened: {path}";
         }
     }
 

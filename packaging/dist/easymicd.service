@@ -1,5 +1,5 @@
 [Unit]
-Description=EasyMic Audio-Daemon
+Description=EasyMic Audio Daemon
 Documentation=file:///usr/share/doc/easymic/README.md
 After=pipewire.service wireplumber.service pulseaudio.service
 Wants=pipewire.service

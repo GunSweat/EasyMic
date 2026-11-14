@@ -55,7 +55,7 @@ public sealed class ParecCapture : IAsyncDisposable
         startInfo.ArgumentList.Add("--client-name=EasyMic");
 
         var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("parec konnte nicht gestartet werden.");
+            ?? throw new InvalidOperationException("parec could not be started.");
 
         var cancellation = new CancellationTokenSource();
         var stderr = process.StandardError.ReadToEndAsync();
@@ -182,7 +182,7 @@ public sealed class ParecCapture : IAsyncDisposable
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                Failed?.Invoke($"Aufnahme-Fehler: {exception.Message}");
+                Failed?.Invoke($"Capture error: {exception.Message}");
             }
 
             return;
@@ -215,7 +215,7 @@ public sealed class ParecCapture : IAsyncDisposable
 
         if (detail.Length == 0)
         {
-            detail = $"parec wurde beendet (Exit-Code {process.ExitCode}).";
+            detail = $"parec exited (exit code {process.ExitCode}).";
         }
 
         Failed?.Invoke(detail);

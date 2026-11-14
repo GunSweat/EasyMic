@@ -50,7 +50,7 @@ public sealed class LoopbackMonitor : IAsyncDisposable
 
             if (string.IsNullOrWhiteSpace(_sinkName))
             {
-                return "Kein Ausgabegerät gefunden – Monitoring ist nicht verfügbar.";
+                return "No output device found – monitoring is unavailable.";
             }
 
             LastError = null;
@@ -68,7 +68,7 @@ public sealed class LoopbackMonitor : IAsyncDisposable
 
             if (result.ExitCode != 0)
             {
-                LastError = $"Monitoring konnte nicht aktiviert werden: {FirstLine(result.StdErr)}";
+                LastError = $"Monitoring could not be enabled: {FirstLine(result.StdErr)}";
                 return LastError;
             }
 
@@ -78,7 +78,7 @@ public sealed class LoopbackMonitor : IAsyncDisposable
                     CultureInfo.InvariantCulture,
                     out var moduleId))
             {
-                LastError = $"Unerwartete Antwort von pactl: {result.StdOut}";
+                LastError = $"Unexpected response from pactl: {result.StdOut}";
                 return LastError;
             }
 
@@ -89,7 +89,7 @@ public sealed class LoopbackMonitor : IAsyncDisposable
             {
                 await UnloadAsync(moduleId).ConfigureAwait(false);
                 _moduleId = null;
-                LastError = "Der Monitoring-Stream konnte nicht gefunden werden.";
+                LastError = "The monitoring stream could not be found.";
                 return LastError;
             }
 
@@ -132,7 +132,7 @@ public sealed class LoopbackMonitor : IAsyncDisposable
 
             if (result.ExitCode != 0)
             {
-                LastError = $"Monitoring konnte nicht deaktiviert werden: {FirstLine(result.StdErr)}";
+                LastError = $"Monitoring could not be disabled: {FirstLine(result.StdErr)}";
                 return LastError;
             }
 

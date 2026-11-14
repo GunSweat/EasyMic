@@ -65,7 +65,7 @@ public sealed class IpcClient : IAsyncDisposable
 
     public async Task<IpcResponse> SendAsync(IpcRequest request, CancellationToken cancellationToken = default)
     {
-        var writer = _writer ?? throw new InvalidOperationException("Nicht mit dem Daemon verbunden.");
+        var writer = _writer ?? throw new InvalidOperationException("Not connected to the daemon.");
         var completion = new TaskCompletionSource<IpcResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         lock (_pendingGate)
@@ -98,7 +98,7 @@ public sealed class IpcClient : IAsyncDisposable
         var response = await SendAsync(IpcRequest.Subscribe, cancellationToken).ConfigureAwait(false);
         if (!response.Ok)
         {
-            throw new InvalidOperationException(response.Error ?? "Abo fehlgeschlagen.");
+            throw new InvalidOperationException(response.Error ?? "Subscription failed.");
         }
 
         return response.Status ?? LatestStatus;
@@ -239,7 +239,7 @@ public sealed class IpcClient : IAsyncDisposable
         {
             while (_pending.TryDequeue(out var completion))
             {
-                completion.TrySetException(new IOException("Verbindung zum Daemon verloren."));
+                completion.TrySetException(new IOException("Connection to the daemon lost."));
             }
         }
     }

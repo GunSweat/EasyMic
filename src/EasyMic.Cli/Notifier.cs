@@ -34,7 +34,7 @@ public static class Notifier
         startInfo.ArgumentList.Add("--action=open=Open EasyMic");
         startInfo.ArgumentList.Add("--wait");
         startInfo.ArgumentList.Add("Open EasyMic");
-        startInfo.ArgumentList.Add("EasyMic ist bereit – klicke zum Öffnen der Oberfläche.");
+        startInfo.ArgumentList.Add("EasyMic is ready – click to open the interface.");
 
         Process? process;
         try
@@ -43,7 +43,7 @@ public static class Notifier
         }
         catch
         {
-            Console.Error.WriteLine("notify-send ist nicht verfügbar.");
+            Console.Error.WriteLine("notify-send is not available.");
             return 1;
         }
 

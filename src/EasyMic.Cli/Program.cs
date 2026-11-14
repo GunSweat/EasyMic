@@ -58,7 +58,7 @@ try
                 }
                 else
                 {
-                    Console.WriteLine(response.Message ?? "Monitoring umgeschaltet.");
+                    Console.WriteLine(response.Message ?? "Monitoring toggled.");
                 }
 
                 return 0;
@@ -67,7 +67,7 @@ try
         case "set":
             if (positional.Length < 2)
             {
-                return Fail("Verwendung: easymic set <parameter> <wert>");
+                return Fail("Usage: easymic set <parameter> <value>");
             }
 
             return await RunClientAsync(async client =>
@@ -76,7 +76,7 @@ try
                 var value = NormalizeValue(name, positional[1]);
                 if (value is null)
                 {
-                    return Fail($"Ungültiger Wert für {name}: {positional[1]}");
+                    return Fail($"Invalid value for {name}: {positional[1]}");
                 }
 
                 var response = await client.SendAsync(new IpcRequest("set", name, value));
@@ -85,7 +85,7 @@ try
                     return Fail(response.Error);
                 }
 
-                Console.WriteLine(response.Message ?? "Gesetzt.");
+                Console.WriteLine(response.Message ?? "Set.");
                 return 0;
             });
 
@@ -127,17 +127,17 @@ try
                     return await PrintDevicesAsync(client, kind, json);
                 }
 
-                Console.WriteLine("Quellen:");
+                Console.WriteLine("Sources:");
                 await PrintDevicesAsync(client, "source", json);
                 Console.WriteLine();
-                Console.WriteLine("Ausgaben:");
+                Console.WriteLine("Sinks:");
                 return await PrintDevicesAsync(client, "sink", json);
             });
 
         case "source":
             if (positional.Length == 0)
             {
-                return Fail("Verwendung: easymic source <name>");
+                return Fail("Usage: easymic source <name>");
             }
 
             return await RunClientAsync(async client =>
@@ -148,14 +148,14 @@ try
                     return Fail(response.Error);
                 }
 
-                Console.WriteLine(response.Message ?? "Quelle gesetzt.");
+                Console.WriteLine(response.Message ?? "Source set.");
                 return 0;
             });
 
         case "sink":
             if (positional.Length == 0)
             {
-                return Fail("Verwendung: easymic sink <name>");
+                return Fail("Usage: easymic sink <name>");
             }
 
             return await RunClientAsync(async client =>
@@ -166,14 +166,14 @@ try
                     return Fail(response.Error);
                 }
 
-                Console.WriteLine(response.Message ?? "Ausgabe gesetzt.");
+                Console.WriteLine(response.Message ?? "Sink set.");
                 return 0;
             });
 
         case "latency":
             if (positional.Length == 0)
             {
-                return Fail("Verwendung: easymic latency <millisekunden>");
+                return Fail("Usage: easymic latency <milliseconds>");
             }
 
             return await RunClientAsync(async client =>
@@ -184,7 +184,7 @@ try
                     return Fail(response.Error);
                 }
 
-                Console.WriteLine(response.Message ?? "Latenz gesetzt.");
+                Console.WriteLine(response.Message ?? "Latency set.");
                 return 0;
             });
 
@@ -197,7 +197,7 @@ try
                     return Fail(response.Error);
                 }
 
-                Console.WriteLine(response.Message ?? "Einstellungen zurückgesetzt.");
+                Console.WriteLine(response.Message ?? "Settings reset.");
                 return 0;
             });
 
@@ -228,7 +228,7 @@ try
             return 0;
 
         default:
-            return Fail($"Unbekannter Befehl: {command}. Mit \"easymic help\" siehst du alle Befehle.");
+            return Fail($"Unknown command: {command}. Run \"easymic help\" for a list of commands.");
     }
 }
 catch (OperationCanceledException)
@@ -264,26 +264,26 @@ static async Task<int> RunDaemonAsync(string action)
     {
         case "start":
             await DaemonLauncher.EnsureRunningAsync();
-            Console.WriteLine("EasyMic-Daemon läuft.");
+            Console.WriteLine("EasyMic daemon is running.");
             return 0;
 
         case "stop":
             await DaemonLauncher.StopAsync();
-            Console.WriteLine("EasyMic-Daemon gestoppt.");
+            Console.WriteLine("EasyMic daemon stopped.");
             return 0;
 
         case "restart":
             await DaemonLauncher.StopAsync();
             await DaemonLauncher.EnsureRunningAsync();
-            Console.WriteLine("EasyMic-Daemon neu gestartet.");
+            Console.WriteLine("EasyMic daemon restarted.");
             return 0;
 
         case "status":
-            Console.WriteLine($"EasyMic-Daemon: {await DaemonLauncher.GetStateAsync()}");
+            Console.WriteLine($"EasyMic daemon: {await DaemonLauncher.GetStateAsync()}");
             return 0;
 
         default:
-            return Fail("Verwendung: easymic daemon <start|stop|restart|status>");
+            return Fail("Usage: easymic daemon <start|stop|restart|status>");
     }
 }
 
@@ -303,7 +303,7 @@ static async Task<int> PrintDevicesAsync(IpcClient client, string kind, bool jso
 
     if (response.Devices is null || response.Devices.Count == 0)
     {
-        Console.WriteLine("  (keine Geräte gefunden)");
+        Console.WriteLine("  (no devices found)");
         return 0;
     }
 
@@ -323,22 +323,22 @@ static void PrintStatus(StatusSnapshot? status)
 {
     if (status is null)
     {
-        Console.WriteLine("Kein Status verfügbar.");
+        Console.WriteLine("No status available.");
         return;
     }
 
     Console.WriteLine("EasyMic");
-    Console.WriteLine($"  Aufnahme:    {(status.Running ? "läuft" : "gestoppt")}");
-    Console.WriteLine($"  Eingang:     {status.SourceDevice ?? "–"}");
-    Console.WriteLine($"  Ausgang:     {status.SinkDevice ?? "–"}");
-    Console.WriteLine($"  Virtuell:    {(status.VirtualMicAvailable ? status.VirtualDevice : "nicht verfügbar")}");
-    Console.WriteLine($"  Monitoring:  {(status.MonitorEnabled ? "an" : "aus")}");
-    Console.WriteLine($"  Latenz:      {status.LatencyMs} ms");
-    Console.WriteLine($"  Pegel:       {status.Meter.PeakDb.ToString("0.0", CultureInfo.InvariantCulture)} dBFS");
+    Console.WriteLine($"  Capture:     {(status.Running ? "running" : "stopped")}");
+    Console.WriteLine($"  Input:       {status.SourceDevice ?? "–"}");
+    Console.WriteLine($"  Output:      {status.SinkDevice ?? "–"}");
+    Console.WriteLine($"  Virtual:     {(status.VirtualMicAvailable ? status.VirtualDevice : "unavailable")}");
+    Console.WriteLine($"  Monitoring:  {(status.MonitorEnabled ? "on" : "off")}");
+    Console.WriteLine($"  Latency:     {status.LatencyMs} ms");
+    Console.WriteLine($"  Level:       {status.Meter.PeakDb.ToString("0.0", CultureInfo.InvariantCulture)} dBFS");
 
     if (!string.IsNullOrWhiteSpace(status.Notice))
     {
-        Console.WriteLine($"  Hinweis:     {status.Notice}");
+        Console.WriteLine($"  Notice:      {status.Notice}");
     }
 
     PrintSettings(new AppSettings { Processing = status.Processing }, indent: "  ");
@@ -353,8 +353,8 @@ static void PrintSettings(AppSettings? settings, string indent = "  ")
 
     var processing = settings.Processing;
     Console.WriteLine();
-    Console.WriteLine($"{indent}Effekte");
-    foreach (var parameter in ParameterCatalog.Main.Where(parameter => parameter.Group == "Effekte"))
+    Console.WriteLine($"{indent}Effects");
+    foreach (var parameter in ParameterCatalog.Main.Where(parameter => parameter.Group == "Effects"))
     {
         Console.WriteLine($"{indent}{parameter.Label,-12} {parameter.Format(parameter.Read(processing))}");
     }
@@ -371,10 +371,10 @@ static void PrintSettings(AppSettings? settings, string indent = "  ")
         Console.WriteLine($"{indent}{parameter.Label,-12} {parameter.Format(parameter.Read(processing))}");
     }
 
-    Console.WriteLine($"{indent}Schalter");
+    Console.WriteLine($"{indent}Switches");
     foreach (var toggle in ParameterCatalog.Toggles)
     {
-        Console.WriteLine($"{indent}{toggle.Label,-12} {(toggle.Read(processing) ? "an" : "aus")}");
+        Console.WriteLine($"{indent}{toggle.Label,-12} {(toggle.Read(processing) ? "on" : "off")}");
     }
 }
 
@@ -424,30 +424,30 @@ static string? NormalizeValue(string name, string raw)
 
 static void PrintHelp()
 {
-    Console.WriteLine("easymic – EasyMic Steuerung und Terminal-Oberfläche");
+    Console.WriteLine("easymic – EasyMic control and terminal UI");
     Console.WriteLine();
-    Console.WriteLine("Aufruf:");
-    Console.WriteLine("  easymic                         Oberfläche starten");
-    Console.WriteLine("  easymic status [--json]         Status anzeigen");
-    Console.WriteLine("  easymic monitor [on|off]        Monitoring umschalten");
-    Console.WriteLine("  easymic set <name> <wert>       Regler setzen");
-    Console.WriteLine("  easymic get [name] [--json]     Werte anzeigen");
-    Console.WriteLine("  easymic devices [source|sink]   Geräte auflisten");
-    Console.WriteLine("  easymic source <name>           Eingang wechseln");
-    Console.WriteLine("  easymic sink <name>             Ausgang wechseln");
-    Console.WriteLine("  easymic latency <ms>            Monitoring-Latenz setzen");
-    Console.WriteLine("  easymic reset                   Regler zurücksetzen");
+    Console.WriteLine("Usage:");
+    Console.WriteLine("  easymic                         Start the UI");
+    Console.WriteLine("  easymic status [--json]         Show status");
+    Console.WriteLine("  easymic monitor [on|off]        Toggle monitoring");
+    Console.WriteLine("  easymic set <name> <value>      Set a control");
+    Console.WriteLine("  easymic get [name] [--json]     Show values");
+    Console.WriteLine("  easymic devices [source|sink]   List devices");
+    Console.WriteLine("  easymic source <name>           Change input");
+    Console.WriteLine("  easymic sink <name>             Change output");
+    Console.WriteLine("  easymic latency <ms>            Set monitoring latency");
+    Console.WriteLine("  easymic reset                   Reset controls");
     Console.WriteLine("  easymic daemon <start|stop|restart|status>");
-    Console.WriteLine("  easymic notify                  Login-Benachrichtigung anzeigen");
+    Console.WriteLine("  easymic notify                  Show login notification");
     Console.WriteLine();
-    Console.WriteLine("Regler:");
-    Console.WriteLine("  pitch, volume, ton, gate, schwelle, denoise, reduktion, mix");
+    Console.WriteLine("Controls:");
+    Console.WriteLine("  pitch, volume, tone, gate, threshold, denoise, reduction, mix");
     Console.WriteLine("  gate-attack, gate-release, gate-hold, gate-damping");
     Console.WriteLine("  denoise-floor, denoise-smoothing, gate-on, denoise-on, limiter-on");
     Console.WriteLine();
-    Console.WriteLine("Beispiele:");
+    Console.WriteLine("Examples:");
     Console.WriteLine("  easymic set volume 120");
     Console.WriteLine("  easymic set gate 45%");
-    Console.WriteLine("  easymic set ton -6");
+    Console.WriteLine("  easymic set tone -6");
     Console.WriteLine("  easymic set limiter-on off");
 }

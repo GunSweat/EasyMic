@@ -356,7 +356,7 @@ public sealed class TuiRunner
         catch (Exception exception)
         {
             await client.DisposeAsync().ConfigureAwait(false);
-            _state.Notice = $"Daemon nicht erreichbar: {exception.Message}";
+            _state.Notice = $"Daemon not reachable: {exception.Message}";
             _state.NoticeIsError = true;
         }
     }

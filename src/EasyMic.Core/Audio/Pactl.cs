@@ -27,7 +27,7 @@ internal static class ProcessRunner
         using var process = new Process { StartInfo = startInfo };
         if (!process.Start())
         {
-            throw new InvalidOperationException($"{fileName} konnte nicht gestartet werden.");
+            throw new InvalidOperationException($"{fileName} could not be started.");
         }
 
         var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);

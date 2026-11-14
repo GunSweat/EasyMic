@@ -206,7 +206,7 @@ public sealed class IpcServer : IAsyncDisposable
                 {
                     await client.WriteLineAsync(
                         JsonSerializer.Serialize(
-                            IpcMessage.FromResponse(IpcResponse.Failure("Ungültige Anfrage.")),
+                            IpcMessage.FromResponse(IpcResponse.Failure("Invalid request.")),
                             IpcProtocol.JsonOptions),
                         cancellationToken).ConfigureAwait(false);
                     continue;

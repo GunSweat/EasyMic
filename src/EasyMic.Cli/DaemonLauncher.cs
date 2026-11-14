@@ -33,7 +33,7 @@ public static class DaemonLauncher
         if (daemon is null)
         {
             throw new InvalidOperationException(
-                "easymicd wurde nicht gefunden. Bitte zuerst install.sh ausführen.");
+                "easymicd was not found. Run install.sh first.");
         }
 
         StartDetached(daemon);
@@ -44,7 +44,7 @@ public static class DaemonLauncher
         }
 
         throw new InvalidOperationException(
-            "Der EasyMic-Daemon konnte nicht gestartet werden. Details stehen in "
+            "The EasyMic daemon could not be started. Details are in "
             + EasyMicPaths.DaemonLogPath + ".");
     }
 
@@ -84,7 +84,7 @@ public static class DaemonLauncher
     {
         if (await IpcClient.ProbeAsync(IpcProtocol.DefaultSocketPath, cancellationToken).ConfigureAwait(false))
         {
-            return "läuft";
+            return "running";
         }
 
         var result = await RunAsync(
@@ -93,7 +93,7 @@ public static class DaemonLauncher
             cancellationToken).ConfigureAwait(false);
 
         var state = result.StdOut.Trim();
-        return state.Length == 0 || state == "unknown" ? "gestoppt" : state;
+        return state.Length == 0 || state == "unknown" ? "stopped" : state;
     }
 
     public static async Task<bool> WaitForSocketAsync(CancellationToken cancellationToken = default)
@@ -156,7 +156,7 @@ public static class DaemonLauncher
         }
         catch (Exception exception)
         {
-            throw new InvalidOperationException($"easymicd konnte nicht gestartet werden: {exception.Message}");
+            throw new InvalidOperationException($"easymicd could not be started: {exception.Message}");
         }
     }
 
@@ -202,7 +202,7 @@ public static class DaemonLauncher
         }
 
         using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException($"{fileName} konnte nicht gestartet werden.");
+            ?? throw new InvalidOperationException($"{fileName} could not be started.");
 
         var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderr = process.StandardError.ReadToEndAsync(cancellationToken);

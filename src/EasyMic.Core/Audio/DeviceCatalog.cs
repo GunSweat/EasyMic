@@ -20,7 +20,7 @@ public static class DeviceCatalog
     {
         if (devices.Count == 0)
         {
-            throw new InvalidOperationException($"Keine {kind}-Geräte gefunden.");
+            throw new InvalidOperationException($"No {kind} devices found.");
         }
 
         var resolved = Resolve(devices, query);
@@ -34,7 +34,7 @@ public static class DeviceCatalog
             devices.Take(10).Select(device => $"  • {device.DisplayName}  ({device.Name})"));
 
         throw new InvalidOperationException(
-            $"Kein {kind} für \"{query}\" gefunden.{Environment.NewLine}Verfügbar:{Environment.NewLine}{available}");
+            $"No {kind} found for \"{query}\".{Environment.NewLine}Available:{Environment.NewLine}{available}");
     }
 
     public static AudioDevice? Resolve(IReadOnlyList<AudioDevice> devices, string? query)
@@ -89,7 +89,7 @@ public static class DeviceCatalog
             0 => null,
             1 => matches[0],
             _ => throw new InvalidOperationException(
-                $"\"{value}\" ist mehrdeutig. Bitte einen genaueren Namen verwenden: "
+                $"\"{value}\" is ambiguous. Please use a more specific name: "
                 + string.Join(", ", matches.Select(device => device.DisplayName))),
         };
     }
@@ -100,7 +100,7 @@ public static class DeviceCatalog
         if (result.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                $"pactl list {kind} ist fehlgeschlagen: {FirstLine(result.StdErr)}");
+                $"pactl list {kind} failed: {FirstLine(result.StdErr)}");
         }
 
         return Parse(result.StdOut);

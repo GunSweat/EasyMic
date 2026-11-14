@@ -81,7 +81,7 @@ public sealed class DaemonHost : IAsyncDisposable
             }
             catch (Exception exception)
             {
-                SetNotice($"Audioausgabe konnte nicht gestartet werden: {exception.Message}", isError: true);
+                SetNotice($"Audio output could not be started: {exception.Message}", isError: true);
             }
         }
 
@@ -221,11 +221,11 @@ public sealed class DaemonHost : IAsyncDisposable
         }
         catch (IOException)
         {
-            return "Der EasyMic-Daemon läuft bereits.";
+            return "The EasyMic daemon is already running.";
         }
         catch (UnauthorizedAccessException exception)
         {
-            return $"Sperrdatei konnte nicht geöffnet werden: {exception.Message}";
+            return $"Lock file could not be opened: {exception.Message}";
         }
     }
 
@@ -277,7 +277,7 @@ public sealed class DaemonHost : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            SetNotice($"Audio-Geräte konnten nicht ermittelt werden: {exception.Message}", isError: true);
+            SetNotice($"Audio devices could not be determined: {exception.Message}", isError: true);
         }
     }
 
@@ -285,7 +285,7 @@ public sealed class DaemonHost : IAsyncDisposable
     {
         if (_source is null)
         {
-            SetNotice("Kein Mikrofon gefunden – suche weiter ...", isError: true);
+            SetNotice("No microphone found – still searching ...", isError: true);
             ScheduleSourceRetry();
             return;
         }
@@ -306,11 +306,11 @@ public sealed class DaemonHost : IAsyncDisposable
         try
         {
             capture.Start();
-            Log?.Invoke($"Aufnahme gestartet: {_source.DisplayName}");
+            Log?.Invoke($"Capture started: {_source.DisplayName}");
         }
         catch (Exception exception)
         {
-            SetNotice($"Aufnahme konnte nicht gestartet werden: {exception.Message}", isError: true);
+            SetNotice($"Capture could not be started: {exception.Message}", isError: true);
         }
     }
 
@@ -328,7 +328,7 @@ public sealed class DaemonHost : IAsyncDisposable
             return;
         }
 
-        SetNotice($"Aufnahme: {message}", isError: true);
+        SetNotice($"Capture: {message}", isError: true);
 
         if (Interlocked.CompareExchange(ref _restartScheduled, 1, 0) == 0)
         {
@@ -452,14 +452,14 @@ public sealed class DaemonHost : IAsyncDisposable
 
         if (_virtualMic is not { IsAvailable: true })
         {
-            const string error = "Monitoring ist nur mit verfügbarem virtuellem Mikrofon möglich.";
+            const string error = "Monitoring requires an available virtual microphone.";
             SetNotice(error, isError: true);
             return error;
         }
 
         if (_sink is null)
         {
-            const string error = "Kein Ausgabegerät gefunden – Monitoring ist nicht verfügbar.";
+            const string error = "No output device found – monitoring is unavailable.";
             SetNotice(error, isError: true);
             return error;
         }
@@ -483,12 +483,12 @@ public sealed class DaemonHost : IAsyncDisposable
             var device = DeviceCatalog.Resolve(sources, query);
             if (device is null)
             {
-                return $"Keine Quelle für \"{query}\" gefunden.";
+                return $"No source found for \"{query}\".";
             }
 
             if (device.Name.Equals(VirtualMic.SourceName, StringComparison.OrdinalIgnoreCase))
             {
-                return "Die virtuelle Quelle kann nicht als Eingang verwendet werden.";
+                return "The virtual source cannot be used as an input.";
             }
 
             _source = device;
@@ -516,12 +516,12 @@ public sealed class DaemonHost : IAsyncDisposable
             var device = DeviceCatalog.Resolve(sinks, query);
             if (device is null)
             {
-                return $"Keine Ausgabe für \"{query}\" gefunden.";
+                return $"No sink found for \"{query}\".";
             }
 
             if (device.Name.Equals(VirtualMic.SinkName, StringComparison.OrdinalIgnoreCase))
             {
-                return "Die virtuelle Senke kann nicht als Ausgabe verwendet werden.";
+                return "The virtual sink cannot be used as an output.";
             }
 
             var wasEnabled = _monitorEnabled;
@@ -587,8 +587,8 @@ public sealed class DaemonHost : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            Log?.Invoke($"IPC-Server konnte nicht gestartet werden: {exception.Message}");
-            SetNotice($"IPC-Server konnte nicht gestartet werden: {exception.Message}", isError: true);
+            Log?.Invoke($"IPC server could not be started: {exception.Message}");
+            SetNotice($"IPC server could not be started: {exception.Message}", isError: true);
         }
     }
 
@@ -625,43 +625,43 @@ public sealed class DaemonHost : IAsyncDisposable
             case "source":
                 if (string.IsNullOrWhiteSpace(request.Value))
                 {
-                    return IpcResponse.Failure("source erwartet einen Gerätenamen.");
+                    return IpcResponse.Failure("source expects a device name.");
                 }
 
                 var sourceError = await SetSourceAsync(request.Value).ConfigureAwait(false);
                 return sourceError is null
-                    ? new IpcResponse { Ok = true, Message = $"Quelle: {_source?.DisplayName}", Status = BuildStatus(), Settings = SnapshotSettings() }
+                    ? new IpcResponse { Ok = true, Message = $"Source: {_source?.DisplayName}", Status = BuildStatus(), Settings = SnapshotSettings() }
                     : IpcResponse.Failure(sourceError);
 
             case "sink":
                 if (string.IsNullOrWhiteSpace(request.Value))
                 {
-                    return IpcResponse.Failure("sink erwartet einen Gerätenamen.");
+                    return IpcResponse.Failure("sink expects a device name.");
                 }
 
                 var sinkError = await SetSinkAsync(request.Value).ConfigureAwait(false);
                 return sinkError is null
-                    ? new IpcResponse { Ok = true, Message = $"Ausgabe: {_sink?.DisplayName}", Status = BuildStatus(), Settings = SnapshotSettings() }
+                    ? new IpcResponse { Ok = true, Message = $"Sink: {_sink?.DisplayName}", Status = BuildStatus(), Settings = SnapshotSettings() }
                     : IpcResponse.Failure(sinkError);
 
             case "latency":
                 if (!int.TryParse(request.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var latency))
                 {
-                    return IpcResponse.Failure("latency erwartet eine Zahl in Millisekunden.");
+                    return IpcResponse.Failure("latency expects a number in milliseconds.");
                 }
 
                 var latencyError = await SetLatencyAsync(latency).ConfigureAwait(false);
                 return latencyError is null
-                    ? new IpcResponse { Ok = true, Message = $"Latenz: {_settings.LatencyMs} ms", Status = BuildStatus(), Settings = SnapshotSettings() }
+                    ? new IpcResponse { Ok = true, Message = $"Latency: {_settings.LatencyMs} ms", Status = BuildStatus(), Settings = SnapshotSettings() }
                     : IpcResponse.Failure(latencyError);
 
             case "reset":
                 UpdateSettings(settings => (settings with { Processing = ProcessingSettings.Default }).Clamp());
-                return new IpcResponse { Ok = true, Message = "Einstellungen zurückgesetzt.", Status = BuildStatus(), Settings = SnapshotSettings() };
+                return new IpcResponse { Ok = true, Message = "Settings reset.", Status = BuildStatus(), Settings = SnapshotSettings() };
 
             case "reload":
                 await ReloadAsync().ConfigureAwait(false);
-                return new IpcResponse { Ok = true, Message = "Einstellungen neu geladen.", Status = BuildStatus(), Settings = SnapshotSettings() };
+                return new IpcResponse { Ok = true, Message = "Settings reloaded.", Status = BuildStatus(), Settings = SnapshotSettings() };
 
             case "shutdown":
             case "stop":
@@ -670,10 +670,10 @@ public sealed class DaemonHost : IAsyncDisposable
                     await Task.Delay(200).ConfigureAwait(false);
                     RequestShutdown();
                 });
-                return new IpcResponse { Ok = true, Message = "Daemon wird beendet." };
+                return new IpcResponse { Ok = true, Message = "Daemon is shutting down." };
 
             default:
-                return IpcResponse.Failure($"Unbekannter Befehl: {request.Command}");
+                return IpcResponse.Failure($"Unknown command: {request.Command}");
         }
     }
 
@@ -685,8 +685,8 @@ public sealed class DaemonHost : IAsyncDisposable
         target = normalized switch
         {
             null or "" or "toggle" => !_monitorEnabled,
-            "on" or "an" or "1" or "true" or "yes" => true,
-            "off" or "aus" or "0" or "false" or "no" => false,
+            "on" or "1" or "true" or "yes" => true,
+            "off" or "0" or "false" or "no" => false,
             _ => target,
         };
 
@@ -695,7 +695,7 @@ public sealed class DaemonHost : IAsyncDisposable
             ? new IpcResponse
             {
                 Ok = true,
-                Message = target ? "Monitoring an." : "Monitoring aus.",
+                Message = target ? "Monitoring on." : "Monitoring off.",
                 Status = BuildStatus(),
                 Settings = SnapshotSettings(),
             }
@@ -706,7 +706,7 @@ public sealed class DaemonHost : IAsyncDisposable
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(value))
         {
-            return IpcResponse.Failure("set erwartet Name und Wert.");
+            return IpcResponse.Failure("set expects a name and a value.");
         }
 
         if (TryParseFloat(value, out var numeric))
@@ -743,26 +743,26 @@ public sealed class DaemonHost : IAsyncDisposable
             return new IpcResponse
             {
                 Ok = true,
-                Message = $"{toggle.Label}: {(boolean ? "an" : "aus")}",
+                Message = $"{toggle.Label}: {(boolean ? "on" : "off")}",
                 Status = BuildStatus(),
                 Settings = SnapshotSettings(),
             };
         }
 
-        return IpcResponse.Failure($"Unbekannter Parameter: {name}");
+        return IpcResponse.Failure($"Unknown parameter: {name}");
     }
 
     private IpcResponse HandleToggle(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            return IpcResponse.Failure("toggle erwartet einen Namen.");
+            return IpcResponse.Failure("toggle expects a name.");
         }
 
         var toggle = ParameterCatalog.FindToggle(name);
         if (toggle is null)
         {
-            return IpcResponse.Failure($"Unbekannter Schalter: {name}");
+            return IpcResponse.Failure($"Unknown switch: {name}");
         }
 
         var state = false;
@@ -778,7 +778,7 @@ public sealed class DaemonHost : IAsyncDisposable
         return new IpcResponse
         {
             Ok = true,
-            Message = $"{toggle.Label}: {(state ? "an" : "aus")}",
+            Message = $"{toggle.Label}: {(state ? "on" : "off")}",
             Status = BuildStatus(),
             Settings = SnapshotSettings(),
         };
@@ -812,13 +812,13 @@ public sealed class DaemonHost : IAsyncDisposable
             return new IpcResponse
             {
                 Ok = true,
-                Message = $"{toggle.Label}: {(toggle.Read(settings.Processing) ? "an" : "aus")}",
+                Message = $"{toggle.Label}: {(toggle.Read(settings.Processing) ? "on" : "off")}",
                 Settings = settings,
                 Status = BuildStatus(),
             };
         }
 
-        return IpcResponse.Failure($"Unbekannter Parameter: {name}");
+        return IpcResponse.Failure($"Unknown parameter: {name}");
     }
 
     private async Task<IpcResponse> HandleDevicesAsync(string? kind)
@@ -828,14 +828,14 @@ public sealed class DaemonHost : IAsyncDisposable
             var normalized = kind?.Trim().ToLowerInvariant();
             var devices = new List<DeviceInfo>();
 
-            if (normalized is not ("sink" or "sinks" or "ausgabe"))
+            if (normalized is not ("sink" or "sinks"))
             {
                 devices.AddRange((await DeviceCatalog.GetSourcesAsync().ConfigureAwait(false))
                     .Where(device => !device.Name.Equals(VirtualMic.SourceName, StringComparison.OrdinalIgnoreCase))
                     .Select(DeviceInfo.From));
             }
 
-            if (normalized is "sink" or "sinks" or "ausgabe" or "all" or "alle")
+            if (normalized is "sink" or "sinks" or "all")
             {
                 devices.AddRange((await DeviceCatalog.GetSinksAsync().ConfigureAwait(false))
                     .Where(device => !device.Name.Equals(VirtualMic.SinkName, StringComparison.OrdinalIgnoreCase))
@@ -1036,20 +1036,16 @@ public sealed class DaemonHost : IAsyncDisposable
         switch (value.Trim().ToLowerInvariant())
         {
             case "on":
-            case "an":
             case "true":
             case "1":
             case "yes":
-            case "ja":
                 result = true;
                 return true;
 
             case "off":
-            case "aus":
             case "false":
             case "0":
             case "no":
-            case "nein":
                 result = false;
                 return true;
 

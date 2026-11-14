@@ -55,7 +55,7 @@ public sealed class AppState
             return control.Parameter.Format(control.Parameter.Read(Processing));
         }
 
-        return control.Toggle!.Read(Processing) ? "AN" : "AUS";
+        return control.Toggle!.Read(Processing) ? "ON" : "OFF";
     }
 
     public IpcRequest? Adjust(int direction, bool coarse)
@@ -147,12 +147,12 @@ public sealed class AppState
         controls.Add(new ControlRef(null, ParameterCatalog.Toggles[0]));
         controls.Add(new ControlRef(null, ParameterCatalog.Toggles[1]));
 
-        foreach (var parameter in ParameterCatalog.Details.Where(parameter => parameter.Group == "Gate-Details"))
+        foreach (var parameter in ParameterCatalog.Details.Where(parameter => parameter.Group == "Gate Details"))
         {
             controls.Add(new ControlRef(parameter, null));
         }
 
-        foreach (var parameter in ParameterCatalog.Details.Where(parameter => parameter.Group == "Denoise-Details"))
+        foreach (var parameter in ParameterCatalog.Details.Where(parameter => parameter.Group == "Denoise Details"))
         {
             controls.Add(new ControlRef(parameter, null));
         }

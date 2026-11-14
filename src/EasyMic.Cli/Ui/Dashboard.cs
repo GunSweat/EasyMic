@@ -175,7 +175,7 @@ public static class Dashboard
         var badgeRow = frame.Height - 1;
         hits.MonitorBadge = new HitArea(badgeLeft, badgeRow, badgeLeft + badgeText.Length - 1, badgeRow);
 
-        var quitText = "Q Beenden ";
+        var quitText = "Q Quit ";
         var quitLeft = frame.Width - 2 - quitText.Length;
         hits.QuitButton = new HitArea(quitLeft, badgeRow, quitLeft + quitText.Length - 1, badgeRow);
         _ = footerStart;
@@ -202,11 +202,11 @@ public static class Dashboard
         var prefixLength = 2 + liveText.Length + "  ·  48 kHz · Mono  ·  ".Length;
 
         var right = new Line();
-        right.Add("Virtuell: ", Muted);
-        right.Add(state.VirtualMicAvailable ? "AN" : "AUS",
+        right.Add("Virtual: ", Muted);
+        right.Add(state.VirtualMicAvailable ? "ON" : "OFF",
             state.VirtualMicAvailable ? Good : Bad);
         right.Add("   Monitor: ", Muted);
-        right.Add(state.MonitorEnabled ? "AN" : "AUS", state.MonitorEnabled ? Good : Muted);
+        right.Add(state.MonitorEnabled ? "ON" : "OFF", state.MonitorEnabled ? Good : Muted);
         right.Add($"   {state.LatencyMs} ms", Muted);
 
         var available = inner - prefixLength - right.Length - 1;
@@ -217,7 +217,7 @@ public static class Dashboard
             available = inner - prefixLength - right.Length - 1;
         }
 
-        var source = Clip(state.SourceDevice ?? "kein Mikrofon", Math.Max(4, available));
+        var source = Clip(state.SourceDevice ?? "no microphone", Math.Max(4, available));
 
         status.Add("● ", live ? Good : Bad);
         status.Add(liveText, live ? Bold + Good : Bold + Bad);
@@ -252,7 +252,7 @@ public static class Dashboard
 
         var hint = new Line();
         hint.Add("│", Muted);
-        hint.Add(Clip(" Maus: Klick/Zug = Regler & Schalter   Rad = scrollen   M = Monitor   Q = Beenden", inner), Muted);
+        hint.Add(Clip(" Mouse: click/drag = sliders & switches   Wheel = scroll   M = Monitor   Q = Quit", inner), Muted);
         hint.PadTo(inner);
         hint.Add("│", Muted);
         rows.Add(new DashboardRow(hint.Text, null));
@@ -263,7 +263,7 @@ public static class Dashboard
         var badge = MonitorBadgeText(state);
         bottom.Add(badge, state.MonitorEnabled ? Bold + Good : Bold + Muted);
 
-        var rightText = "Q Beenden ";
+        var rightText = "Q Quit ";
         var fill = inner - badge.Length - rightText.Length - 2;
         if (fill > 0)
         {
@@ -299,7 +299,7 @@ public static class Dashboard
             rows.Add(Blank(inner));
         }
 
-        rows.Add(Section("EFFEKTE", inner));
+        rows.Add(Section("EFFECTS", inner));
 
         for (var i = 0; i < ParameterCatalog.Main.Count; i++)
         {
@@ -307,13 +307,13 @@ public static class Dashboard
         }
 
         rows.Add(Blank(inner));
-        rows.Add(BoxTop("NOISE-GATE & DENOISE", inner));
+        rows.Add(BoxTop("NOISE GATE & DENOISE", inner));
 
         var boxContentWidth = inner - 4;
 
         rows.Add(BoxRow(ToggleRow(state, boxContentWidth, 8, 9), inner));
 
-        rows.Add(BoxRow(SubHeader("Gate-Details", boxContentWidth), inner));
+        rows.Add(BoxRow(SubHeader("Gate Details", boxContentWidth), inner));
 
         for (var i = 0; i < 4; i++)
         {
@@ -321,7 +321,7 @@ public static class Dashboard
             rows.Add(BoxRow(Slider(parameter, state, 10 + i, boxContentWidth), inner));
         }
 
-        rows.Add(BoxRow(SubHeader("Denoise-Details", boxContentWidth), inner));
+        rows.Add(BoxRow(SubHeader("Denoise Details", boxContentWidth), inner));
 
         for (var i = 4; i < 6; i++)
         {
@@ -339,9 +339,9 @@ public static class Dashboard
     private static DashboardRow DeviceRow(AppState state, int inner)
     {
         var line = new Line();
-        line.Add(" EINGANG  ", Muted);
+        line.Add(" INPUT    ", Muted);
         line.Add(Clip(state.SourceDevice ?? "–", Math.Max(8, inner / 2 - 12)), Text);
-        line.Add("     AUSGANG  ", Muted);
+        line.Add("     OUTPUT   ", Muted);
         line.Add(Clip(state.SinkDevice ?? "–", Math.Max(8, inner / 2 - 14)), Text);
         line.PadTo(inner);
         return new DashboardRow(line.Text, null);
@@ -350,7 +350,7 @@ public static class Dashboard
     private static DashboardRow MeterRow(AppState state, int inner)
     {
         var line = new Line();
-        line.Add(" PEGEL    ", Muted);
+        line.Add(" LEVEL    ", Muted);
 
         var valueWidth = 19;
         var barWidth = Math.Max(10, inner - 10 - valueWidth);
@@ -461,7 +461,7 @@ public static class Dashboard
     private static DashboardRow ToggleRow(AppState state, int width, int firstIndex, int secondIndex)
     {
         var line = new Line();
-        line.Add(" Ein/Aus:  ", Muted);
+        line.Add(" On/Off:   ", Muted);
 
         var first = AppState.Controls[firstIndex];
         var second = AppState.Controls[secondIndex];
@@ -486,7 +486,7 @@ public static class Dashboard
         var toggle = control.Toggle!;
         var on = toggle.Read(state.Processing);
         var selected = state.Selected == index;
-        var text = $"[{(on ? "●" : "○")} {toggle.Label} {(on ? "AN" : "AUS")}]";
+        var text = $"[{(on ? "●" : "○")} {toggle.Label} {(on ? "ON" : "OFF")}]";
         var color = selected ? Bold + Accent : on ? Good : Muted;
         var left = line.Length;
         line.Add(text, color);
@@ -496,7 +496,7 @@ public static class Dashboard
     private static DashboardRow LimiterRow(AppState state, int width)
     {
         var line = new Line();
-        line.Add(" Ausgang:  ", Muted);
+        line.Add(" Output:   ", Muted);
         var (left, length) = AddToggle(line, AppState.Controls[16], 16, state);
         line.PadTo(width);
         return new DashboardRow(
@@ -558,7 +558,7 @@ public static class Dashboard
     }
 
     private static string MonitorBadgeText(AppState state)
-        => $" [M] Monitoring: {(state.MonitorEnabled ? "AN" : "AUS")} ";
+        => $" [M] Monitoring: {(state.MonitorEnabled ? "ON" : "OFF")} ";
 
     private static string Pad(string text, int width)
         => text.Length >= width ? text[..width] : text.PadRight(width);

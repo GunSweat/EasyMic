@@ -46,7 +46,7 @@ public static class ParameterCatalog
     private static string PlainDb(float value) => $"{value.ToString("0", CultureInfo.InvariantCulture)} dB";
 
     private static string SignedOctaves(float value)
-        => $"{(value >= 0 ? "+" : string.Empty)}{value.ToString("0.00", CultureInfo.InvariantCulture)} Okt.";
+        => $"{(value >= 0 ? "+" : string.Empty)}{value.ToString("0.00", CultureInfo.InvariantCulture)} oct.";
 
     private static string Milliseconds(float value) => $"{MathF.Round(value):0} ms";
 
@@ -56,22 +56,22 @@ public static class ParameterCatalog
             "pitch", "PITCH", -1f, 1f, 0.05f, 0.25f,
             settings => settings.PitchOctaves,
             (settings, value) => settings with { PitchOctaves = value },
-            SignedOctaves, "Effekte",
-            new[] { "pitch", "tonhoehe", "tonhöhe" }),
+            SignedOctaves, "Effects",
+            new[] { "pitch" }),
 
         new TuningParameter(
             "volume", "VOLUME", 0f, 2f, 0.02f, 0.10f,
             settings => settings.Volume,
             (settings, value) => settings with { Volume = value },
-            Percent, "Effekte",
-            new[] { "volume", "lautstaerke", "lautstärke" }),
+            Percent, "Effects",
+            new[] { "volume" }),
 
         new TuningParameter(
-            "tone", "TON", -1f, 1f, 0.04f, 0.20f,
+            "tone", "TONE", -1f, 1f, 0.04f, 0.20f,
             settings => settings.Tone,
             (settings, value) => settings with { Tone = value },
-            value => SignedDb(value * 12f), "Effekte",
-            new[] { "tone", "ton", "klang" }),
+            value => SignedDb(value * 12f), "Effects",
+            new[] { "tone" }),
 
         new TuningParameter(
             "gate", "GATE", 0f, 1f, 0.02f, 0.10f,
@@ -81,25 +81,25 @@ public static class ParameterCatalog
             new[] { "gate" }),
 
         new TuningParameter(
-            "threshold", "SCHWELLE", -80f, -10f, 1f, 5f,
+            "threshold", "THRESHOLD", -80f, -10f, 1f, 5f,
             settings => settings.GateThresholdDb,
             (settings, value) => settings with { GateThresholdDb = value },
             PlainDb, "Noise",
-            new[] { "threshold", "schwelle" }),
+            new[] { "threshold" }),
 
         new TuningParameter(
             "denoise", "DENOISE", 0f, 1f, 0.02f, 0.10f,
             settings => settings.DenoiseStrength,
             (settings, value) => settings with { DenoiseStrength = value },
             Percent, "Noise",
-            new[] { "denoise", "rauschunterdrueckung", "rauschunterdrückung" }),
+            new[] { "denoise", "noise-reduction" }),
 
         new TuningParameter(
-            "reduction", "REDUKTION", 6f, 40f, 1f, 4f,
+            "reduction", "REDUCTION", 6f, 40f, 1f, 4f,
             settings => settings.DenoiseReductionDb,
             (settings, value) => settings with { DenoiseReductionDb = value },
             PlainDb, "Noise",
-            new[] { "reduction", "reduktion" }),
+            new[] { "reduction" }),
 
         new TuningParameter(
             "mix", "MIX", 0f, 1f, 0.02f, 0.10f,
@@ -115,43 +115,43 @@ public static class ParameterCatalog
             "gate-attack", "Attack", 1f, 200f, 1f, 10f,
             settings => settings.GateAttackMs,
             (settings, value) => settings with { GateAttackMs = value },
-            Milliseconds, "Gate-Details",
+            Milliseconds, "Gate Details",
             new[] { "gate-attack", "attack" }),
 
         new TuningParameter(
             "gate-release", "Release", 20f, 2000f, 10f, 100f,
             settings => settings.GateReleaseMs,
             (settings, value) => settings with { GateReleaseMs = value },
-            Milliseconds, "Gate-Details",
+            Milliseconds, "Gate Details",
             new[] { "gate-release", "release" }),
 
         new TuningParameter(
             "gate-hold", "Hold", 0f, 1000f, 10f, 100f,
             settings => settings.GateHoldMs,
             (settings, value) => settings with { GateHoldMs = value },
-            Milliseconds, "Gate-Details",
+            Milliseconds, "Gate Details",
             new[] { "gate-hold", "hold" }),
 
         new TuningParameter(
-            "gate-damping", "Dämpfung", 0f, 60f, 1f, 5f,
+            "gate-damping", "Damping", 0f, 60f, 1f, 5f,
             settings => settings.GateMaxReductionDb,
             (settings, value) => settings with { GateMaxReductionDb = value },
-            PlainDb, "Gate-Details",
-            new[] { "gate-damping", "dämpfung", "daempfung", "damping" }),
+            PlainDb, "Gate Details",
+            new[] { "gate-damping", "damping" }),
 
         new TuningParameter(
-            "denoise-floor", "Rauschboden", -80f, -20f, 1f, 5f,
+            "denoise-floor", "Noise Floor", -80f, -20f, 1f, 5f,
             settings => settings.DenoiseFloorDb,
             (settings, value) => settings with { DenoiseFloorDb = value },
-            PlainDb, "Denoise-Details",
-            new[] { "denoise-floor", "rauschboden", "floor" }),
+            PlainDb, "Denoise Details",
+            new[] { "denoise-floor", "noise-floor", "floor" }),
 
         new TuningParameter(
-            "denoise-smoothing", "Glättung", 0f, 0.95f, 0.01f, 0.05f,
+            "denoise-smoothing", "Smoothing", 0f, 0.95f, 0.01f, 0.05f,
             settings => settings.DenoiseSmoothing,
             (settings, value) => settings with { DenoiseSmoothing = value },
-            value => $"{MathF.Round(value * 100f):0} %", "Denoise-Details",
-            new[] { "denoise-smoothing", "glättung", "glaettung", "smoothing" }),
+            value => $"{MathF.Round(value * 100f):0} %", "Denoise Details",
+            new[] { "denoise-smoothing", "smoothing" }),
     };
 
     public static IReadOnlyList<TuningToggle> Toggles { get; } = new[]
