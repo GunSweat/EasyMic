@@ -73,6 +73,28 @@ easymic daemon start # nur den Daemon
 
 Die CLI startet den Daemon bei Bedarf selbst, falls er noch nicht läuft.
 
+### Distributionspakete
+
+Bei jedem Release werden fertige Pakete erzeugt:
+
+| System | Datei | Installation |
+|--------|-------|--------------|
+| Debian/Ubuntu | `easymic_<version>_amd64.deb` | `sudo apt install ./easymic_<version>_amd64.deb` |
+| Fedora/RHEL/openSUSE | `easymic-<version>-1.x86_64.rpm` | `sudo dnf install ./easymic-<version>-1.x86_64.rpm` bzw. `sudo zypper install ./easymic-<version>-1.x86_64.rpm` |
+| Arch/Manjaro | `easymic-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U easymic-<version>-1-x86_64.pkg.tar.zst` |
+| beliebiges Linux | `easymic-<version>-linux-x64.tar.gz` | entpacken und Binaries/Unit manuell installieren |
+| Windows | `easymic-<version>-windows-x64.zip` | Kompilier-Build, siehe `README-Windows.txt` |
+
+Nach der Paketinstallation einmalig:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now easymicd
+```
+
+Beim nächsten Login startet die „Open EasyMic“-Benachrichtigung den Daemon
+ebenfalls automatisch.
+
 ## Bedienung
 
 Die Oberfläche zeigt acht Hauptregler, jeweils eine Zeile mit Mittelmarkierung:
@@ -259,6 +281,16 @@ derzeit nur eine Kompilierung – die Laufzeit benötigt Linux mit
 PipeWire/PulseAudio. Lokal lässt sich der Windows-Build so erzeugen:
 
 ```bash
-dotnet publish src/EasyMic.Cli/EasyMic.Cli.csproj -c Release -r win-x64 --self-contained false -o publish/win-x64
-dotnet publish src/EasyMic.Daemon/EasyMic.Daemon.csproj -c Release -r win-x64 --self-contained false -o publish/win-x64/daemon
+dotnet publish src/EasyMic.Cli/EasyMic.Cli.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o publish/win-x64
 ```
+
+## Release erstellen
+
+```bash
+./release.sh 1.2.3
+```
+
+Das Skript legt den Tag `v1.2.3` an und pusht ihn. Der Release-Workflow baut
+dann `.deb`, `.rpm`, das Arch-Paket, den Linux-Tarball und die Windows-ZIP und
+lädt alles an das GitHub-Release. Alternativ lässt sich der Workflow manuell
+mit einer Version starten (Actions → Release → Run workflow).

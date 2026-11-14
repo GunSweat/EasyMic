@@ -1,0 +1,42 @@
+name: easymic
+arch: __ARCH__
+platform: linux
+version: __VERSION__
+release: "1"
+section: sound
+priority: optional
+maintainer: GunSweat <GunSweat@users.noreply.github.com>
+packager: GunSweat <GunSweat@users.noreply.github.com>
+description: |
+  Linux microphone effect processor with noise gate, spectral denoise,
+  pitch, volume, limiter and a virtual microphone.
+vendor: EasyMic
+homepage: https://github.com/GunSweat/EasyMic
+license: MIT
+contents:
+  - src: build/stage/cli/easymic
+    dst: /usr/bin/easymic
+    file_info:
+      mode: 0755
+  - src: build/stage/daemon/easymicd
+    dst: /usr/bin/easymicd
+    file_info:
+      mode: 0755
+  - src: packaging/dist/easymicd.service
+    dst: /usr/lib/systemd/user/easymicd.service
+    file_info:
+      mode: 0644
+  - src: packaging/dist/easymic-notify.desktop
+    dst: /etc/xdg/autostart/easymic-notify.desktop
+    file_info:
+      mode: 0644
+  - src: README.md
+    dst: /usr/share/doc/easymic/README.md
+    file_info:
+      mode: 0644
+  - src: LICENSE
+    dst: /usr/share/doc/easymic/LICENSE
+    file_info:
+      mode: 0644
+scripts:
+  postinstall: packaging/dist/postinstall.sh

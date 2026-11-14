@@ -1,0 +1,183 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version ohne v (z. B. 1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-${{ github.event.inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    name: Linux packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          version="${{ github.event.inputs.version || github.ref_name }}"
+          version="${version#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Ungültige Version '$version' – erwartet wird x.y.z" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Publish Linux binaries
+        run: |
+          dotnet publish src/EasyMic.Daemon/EasyMic.Daemon.csproj \
+            -c Release -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false \
+            -o build/stage/daemon
+          dotnet publish src/EasyMic.Cli/EasyMic.Cli.csproj \
+            -c Release -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false \
+            -o build/stage/cli
+
+      - name: Build packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          curl -sSL https://github.com/goreleaser/nfpm/releases/download/v2.49.0/nfpm_2.49.0_Linux_x86_64.tar.gz -o /tmp/nfpm.tgz
+          tar -xzf /tmp/nfpm.tgz -C /tmp nfpm
+
+          sed -e "s/__VERSION__/${VERSION}/g" -e "s/__ARCH__/amd64/g" \
+            packaging/nfpm.yaml > build/nfpm-amd64.yaml
+          sed -e "s/__VERSION__/${VERSION}/g" -e "s/__ARCH__/x86_64/g" \
+            packaging/nfpm.yaml > build/nfpm-x86_64.yaml
+
+          /tmp/nfpm package -f build/nfpm-amd64.yaml -p deb \
+            -t "dist/easymic_${VERSION}_amd64.deb"
+          /tmp/nfpm package -f build/nfpm-x86_64.yaml -p rpm \
+            -t "dist/easymic-${VERSION}-1.x86_64.rpm"
+          /tmp/nfpm package -f build/nfpm-x86_64.yaml -p archlinux \
+            -t "dist/easymic-${VERSION}-1-x86_64.pkg.tar.zst"
+
+          mkdir -p "build/easymic-${VERSION}-linux-x64"
+          cp build/stage/cli/easymic \
+             build/stage/daemon/easymicd \
+             README.md LICENSE \
+             packaging/dist/easymicd.service \
+             packaging/dist/easymic-notify.desktop \
+             "build/easymic-${VERSION}-linux-x64/"
+          tar -C build -czf "dist/easymic-${VERSION}-linux-x64.tar.gz" \
+            "easymic-${VERSION}-linux-x64"
+
+          ls -lh dist
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-linux
+          path: dist/*
+          if-no-files-found: error
+
+  windows:
+    name: Windows executable (compile only)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          version="${{ github.event.inputs.version || github.ref_name }}"
+          version="${version#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Ungültige Version '$version' – erwartet wird x.y.z" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Publish Windows binary
+        run: >-
+          dotnet publish src/EasyMic.Cli/EasyMic.Cli.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false
+          -o build/win
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive `
+            -Path build/win/easymic.exe, packaging/dist/README-Windows.txt `
+            -DestinationPath "dist/easymic-$env:VERSION-windows-x64.zip"
+          Get-ChildItem dist
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-windows
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          version="${{ github.event.inputs.version || github.ref_name }}"
+          version="${version#v}"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Create or update release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          ls -lh dist
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          elif git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            gh release create "$tag" dist/* --title "EasyMic $tag" --generate-notes
+          else
+            gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "EasyMic $tag" --generate-notes
+          fi
