@@ -49,12 +49,12 @@ jobs:
             -c Release -r linux-x64 --self-contained true \
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false \
-            -o build/stage/daemon
+            -p:Version=${VERSION} -o build/stage/daemon
           dotnet publish src/EasyMic.Cli/EasyMic.Cli.csproj \
             -c Release -r linux-x64 --self-contained true \
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false \
-            -o build/stage/cli
+            -p:Version=${VERSION} -o build/stage/cli
 
       - name: Build packages
         shell: bash
@@ -125,7 +125,7 @@ jobs:
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false
-          -o build/win
+          -p:Version=$env:VERSION -o build/win
 
       - name: Create ZIP
         shell: pwsh

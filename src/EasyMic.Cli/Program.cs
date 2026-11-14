@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Globalization;
 using System.Text.Json;
 using EasyMic;
@@ -208,7 +209,16 @@ try
 
         case "version":
         case "--version":
-            Console.WriteLine("easymic 1.0.0");
+            var version = System.Reflection.Assembly.GetEntryAssembly()?
+                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? "1.0.0";
+            var build = version.IndexOf('+');
+            if (build >= 0)
+            {
+                version = version[..build];
+            }
+
+            Console.WriteLine($"easymic {version}");
             return 0;
 
         case "help":
