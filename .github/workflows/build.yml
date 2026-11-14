@@ -1,0 +1,49 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux (x64)
+            os: ubuntu-latest
+            rid: linux-x64
+          - name: Windows (x64, compile only)
+            os: windows-latest
+            rid: win-x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build solution
+        run: dotnet build EasyMic.slnx -c Release
+
+      - name: Publish easymic
+        run: dotnet publish src/EasyMic.Cli/EasyMic.Cli.csproj -c Release -r ${{ matrix.rid }} --self-contained false -o publish/cli
+
+      - name: Publish easymicd
+        run: dotnet publish src/EasyMic.Daemon/EasyMic.Daemon.csproj -c Release -r ${{ matrix.rid }} --self-contained false -o publish/daemon
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: easymic-${{ matrix.rid }}
+          path: publish/
+          if-no-files-found: error

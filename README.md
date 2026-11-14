@@ -1,5 +1,7 @@
 # EasyMic
 
+[![Build](https://github.com/GunSweat/EasyMic/actions/workflows/build.yml/badge.svg)](https://github.com/GunSweat/EasyMic/actions/workflows/build.yml)
+
 EasyMic ist ein Mikrofon-Effektprozessor für Linux mit PipeWire/PulseAudio.
 Ein kleiner Daemon verarbeitet das Eingangssignal, stellt ein virtuelles
 Mikrofon bereit und speichert alle Einstellungen. Die Terminal-Oberfläche
@@ -251,3 +253,12 @@ dotnet run --project src/EasyMic.Cli
 ```
 
 Die Daemon- und CLI-Binaries heißen im Build `easymicd` und `easymic`.
+
+GitHub Actions baut bei jedem Push Linux **und** Windows. Der Windows-Build ist
+derzeit nur eine Kompilierung – die Laufzeit benötigt Linux mit
+PipeWire/PulseAudio. Lokal lässt sich der Windows-Build so erzeugen:
+
+```bash
+dotnet publish src/EasyMic.Cli/EasyMic.Cli.csproj -c Release -r win-x64 --self-contained false -o publish/win-x64
+dotnet publish src/EasyMic.Daemon/EasyMic.Daemon.csproj -c Release -r win-x64 --self-contained false -o publish/win-x64/daemon
+```
