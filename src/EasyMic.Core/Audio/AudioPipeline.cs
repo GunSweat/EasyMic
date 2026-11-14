@@ -1,9 +1,10 @@
-using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace EasyMic.Audio;
 
 /// <summary>
-/// Feeds processed audio into the virtual microphone sink through pacat.
+/// Feeds processed audio into the virtual microphone's FIFO. The pipe source
+/// module reads the other end and exposes it as <see cref="VirtualMic.DisplayName"/>.
 /// A small bounded queue decouples capture and playback: if the writer falls
 /// behind, old chunks are dropped so latency does not grow without bound.
 /// </summary>
@@ -11,16 +12,23 @@ public sealed class AudioPipeline : IAsyncDisposable
 {
     private const int MaxQueuedChunks = 8; // ~160 ms
 
+    // Keep the kernel pipe small so a paused source cannot accumulate seconds
+    // of stale audio. 4096 bytes are roughly 42 ms of mono 16-bit audio.
+    private const int PipeBufferBytes = 4096;
+    private const int FSetPipeSize = 1031;
+    private const int SigPipe = 13;
+    private const nint SigIgn = 1;
+
     private readonly Func<ProcessingSettings> _settings;
     private readonly AudioProcessor _processor = new();
     private readonly Queue<short[]> _queue = new();
     private readonly object _gate = new();
     private readonly byte[] _writeBuffer = new byte[16 * 1024];
 
-    private Process? _process;
-    private Stream? _stdin;
+    private static bool _processConfigured;
+
+    private FileStream? _pipe;
     private Task? _writer;
-    private Task<string>? _stderr;
     private CancellationTokenSource? _cancellation;
     private bool _stopping;
 
@@ -31,42 +39,29 @@ public sealed class AudioPipeline : IAsyncDisposable
 
     public event Action<string>? Failed;
 
-    public void Start(string sinkName)
+    public void Start(string fifoPath)
     {
-        if (_process is not null)
+        if (_pipe is not null)
         {
             return;
         }
 
-        var startInfo = new ProcessStartInfo("pacat")
-        {
-            RedirectStandardInput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
+        ConfigureProcess();
 
-        startInfo.ArgumentList.Add("--playback");
-        startInfo.ArgumentList.Add($"--device={sinkName}");
-        startInfo.ArgumentList.Add("--format=s16le");
-        startInfo.ArgumentList.Add($"--rate={AudioProcessor.SampleRate}");
-        startInfo.ArgumentList.Add("--channels=1");
-        startInfo.ArgumentList.Add("--latency-msec=40");
-        startInfo.ArgumentList.Add("--process-time-msec=20");
-        startInfo.ArgumentList.Add("--client-name=EasyMic");
-        startInfo.ArgumentList.Add("--stream-name=EasyMic Virtuelles Mikrofon");
+        var pipe = new FileStream(
+            fifoPath,
+            FileMode.Open,
+            FileAccess.Write,
+            FileShare.ReadWrite,
+            bufferSize: 1,
+            FileOptions.None);
 
-        var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("pacat konnte nicht gestartet werden.");
+        TryShrinkPipe(pipe);
 
         _stopping = false;
-        _process = process;
-        _stdin = process.StandardInput.BaseStream;
-        _stderr = process.StandardError.ReadToEndAsync();
+        _pipe = pipe;
         _cancellation = new CancellationTokenSource();
-        _writer = Task.Run(() => WriterLoopAsync(_cancellation.Token));
-
-        _ = WatchProcessAsync(process);
+        _writer = Task.Run(() => WriterLoopAsync(pipe, _cancellation.Token));
     }
 
     public void Enqueue(ReadOnlySpan<short> samples)
@@ -97,14 +92,8 @@ public sealed class AudioPipeline : IAsyncDisposable
 
     public async Task StopAsync()
     {
-        var process = _process;
         var writer = _writer;
-        var cancellation = _cancellation;
-
-        if (process is null)
-        {
-            return;
-        }
+        _writer = null;
 
         lock (_gate)
         {
@@ -115,16 +104,18 @@ public sealed class AudioPipeline : IAsyncDisposable
 
         try
         {
-            cancellation?.Cancel();
+            _cancellation?.Cancel();
         }
         catch
         {
             // Shutdown path.
         }
 
+        // Closing the write end unblocks a pending write when the source is
+        // paused (for example while no application is capturing the mic).
         try
         {
-            _stdin?.Close();
+            _pipe?.Dispose();
         }
         catch
         {
@@ -139,38 +130,14 @@ public sealed class AudioPipeline : IAsyncDisposable
             }
             catch
             {
-                // Timed out or faulted; the process is killed below.
+                // Timed out or faulted.
             }
         }
 
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-        }
-        catch
-        {
-            // Already gone.
-        }
+        _pipe?.Dispose();
+        _pipe = null;
 
-        try
-        {
-            await process.WaitForExitAsync().ConfigureAwait(false);
-        }
-        catch
-        {
-            // Shutdown path.
-        }
-
-        process.Dispose();
-        cancellation?.Dispose();
-
-        _process = null;
-        _stdin = null;
-        _writer = null;
-        _stderr = null;
+        _cancellation?.Dispose();
         _cancellation = null;
     }
 
@@ -179,15 +146,8 @@ public sealed class AudioPipeline : IAsyncDisposable
         await StopAsync().ConfigureAwait(false);
     }
 
-    private async Task WriterLoopAsync(CancellationToken cancellationToken)
+    private async Task WriterLoopAsync(FileStream pipe, CancellationToken cancellationToken)
     {
-        var stdin = _stdin;
-
-        if (stdin is null)
-        {
-            return;
-        }
-
         try
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -225,7 +185,8 @@ public sealed class AudioPipeline : IAsyncDisposable
 
                 var byteCount = processed.Length * sizeof(short);
                 Buffer.BlockCopy(processed, 0, _writeBuffer, 0, byteCount);
-                await stdin
+
+                await pipe
                     .WriteAsync(_writeBuffer.AsMemory(0, byteCount), cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -236,52 +197,57 @@ public sealed class AudioPipeline : IAsyncDisposable
         }
         catch (ObjectDisposedException)
         {
-            // Normal shutdown.
+            // Normal shutdown while a write was blocked on the FIFO.
         }
         catch (Exception exception)
         {
             if (!_stopping)
             {
-                Failed?.Invoke($"Audioausgabe-Fehler: {exception.Message}");
+                Failed?.Invoke($"Audioausgabe-Fehler: {FirstLine(exception.Message)}");
             }
         }
     }
 
-    private async Task WatchProcessAsync(Process process)
+    private static void ConfigureProcess()
+    {
+        if (_processConfigured)
+        {
+            return;
+        }
+
+        _processConfigured = true;
+
+        try
+        {
+            // A FIFO write with no reader raises SIGPIPE. Ignore it so a
+            // paused/removed pipe source cannot terminate the daemon.
+            _ = signal(SigPipe, SigIgn);
+        }
+        catch
+        {
+            // Non-fatal; the write path reports the error instead.
+        }
+    }
+
+    private static void TryShrinkPipe(FileStream pipe)
     {
         try
         {
-            await process.WaitForExitAsync().ConfigureAwait(false);
+            var handle = pipe.SafeFileHandle.DangerousGetHandle();
+            _ = fcntl(handle.ToInt32(), FSetPipeSize, PipeBufferBytes);
         }
         catch
         {
-            return;
+            // Keep the default pipe size if this is not supported.
         }
-
-        if (_stopping)
-        {
-            return;
-        }
-
-        var detail = string.Empty;
-
-        try
-        {
-            detail = _stderr is null ? string.Empty : (await _stderr.ConfigureAwait(false)).Trim();
-        }
-        catch
-        {
-            // Ignore.
-        }
-
-        if (detail.Length == 0)
-        {
-            detail = $"pacat wurde beendet (Exit-Code {process.ExitCode}).";
-        }
-
-        Failed?.Invoke($"Audioausgabe: {FirstLine(detail)}");
     }
 
     private static string FirstLine(string text)
         => text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+
+    [DllImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static extern int fcntl(int fd, int command, int argument);
+
+    [DllImport("libc", EntryPoint = "signal")]
+    private static extern nint signal(int signalNumber, nint handler);
 }

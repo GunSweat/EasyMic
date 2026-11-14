@@ -77,7 +77,7 @@ public sealed class DaemonHost : IAsyncDisposable
 
             try
             {
-                _pipeline.Start(VirtualMic.SinkName);
+                _pipeline.Start(VirtualMic.PipePath);
             }
             catch (Exception exception)
             {
@@ -423,7 +423,7 @@ public sealed class DaemonHost : IAsyncDisposable
         var old = _monitor;
         _monitor = _sink is null
             ? null
-            : new LoopbackMonitor(VirtualMic.MonitorSource, _sink.Name, _settings.LatencyMs);
+            : new LoopbackMonitor(VirtualMic.SourceName, _sink.Name, _settings.LatencyMs);
 
         if (old is not null)
         {

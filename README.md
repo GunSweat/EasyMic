@@ -23,7 +23,7 @@ Audioverarbeitung zu beenden.
 - **Login-Benachrichtigung** „Open EasyMic“; ein Klick öffnet die Oberfläche
 
 Alle Effekte wirken sowohl auf das virtuelle Mikrofon als auch auf das
-Monitoring. Das Monitoring wird direkt aus dem virtuellen Ausgang abgegriffen,
+Monitoring. Das Monitoring wird direkt aus dem virtuellen Mikrofon abgegriffen,
 damit beide Wege identisch klingen.
 
 ## Voraussetzungen
@@ -194,6 +194,11 @@ Alternativ als Standardquelle setzen:
 pactl set-default-source easymic_virtual_mic
 ```
 
+Intern ist das virtuelle Mikrofon eine Pipe-Source (`module-pipe-source`) mit
+einer FIFO unter `$XDG_RUNTIME_DIR/easymic-$USER.mic`. Dadurch erscheint es
+nicht als Wiedergabe-Stream und wird von Screen-Sharing-Tools nicht
+versehentlich als Anwendungsaudio mitgesendet.
+
 Das Modul wird beim Beenden des Daemons entfernt. Nach einem Absturz räumt der
 nächste Start verwaiste `easymic_*`- und alte `micmon_*`-Module auf.
 
@@ -204,6 +209,7 @@ nächste Start verwaiste `easymic_*`- und alte `micmon_*`-Module auf.
 | `~/.config/easymic/settings.json`                | Einstellungen                 |
 | `~/.local/state/easymic/daemon.log`              | Log beim manuellen Start      |
 | `$XDG_RUNTIME_DIR/easymic.sock`                  | IPC-Socket                    |
+| `$XDG_RUNTIME_DIR/easymic-$USER.mic`             | FIFO des virtuellen Mikrofons |
 | `$XDG_RUNTIME_DIR/easymic.lock`                  | Daemon-Sperre                 |
 | `/tmp/easymic-$USER.lock`                        | Sperre des virtuellen Mikrofons |
 | `~/.config/systemd/user/easymicd.service`        | systemd-User-Service          |
@@ -249,12 +255,18 @@ TUI wird **nicht** automatisch gestartet; dafür ist die Benachrichtigung da.
 
 ## Fehlerbehebung
 
-**Kein virtuelles Mikrofon:** Prüfe, ob `pactl load-module module-null-sink`
-funktioniert und ob `easymicd` läuft. Rechte Module mit
-`pactl list short modules | grep easymic` anzeigen.
+**Kein virtuelles Mikrofon:** Prüfe, ob `pactl load-module module-pipe-source`
+funktioniert und ob `easymicd` läuft. Richtige Module mit
+`pactl list short modules | grep easymic` anzeigen. Die Pipe liegt unter
+`$XDG_RUNTIME_DIR/easymic-$USER.mic`.
 
 **Kein Ton beim Monitoring:** Monitoring ist nach dem Login absichtlich aus.
 Mit `M`, dem Schalter unten links oder `easymic monitor on` einschalten.
+
+**Doppelte Stimme im Screen Share:** Das virtuelle Mikrofon ist eine
+Pipe-Source und wird nicht als Anwendungsaudio erfasst. Während des
+Screen Share das Monitoring ausschalten, da der Monitor-Loopback sonst
+zusätzlich als Wiedergabe-Stream aufgenommen werden kann.
 
 **Daemon startet nicht:** `easymic daemon start`, danach
 `journalctl --user -u easymicd -n 50` bzw. `~/.local/state/easymic/daemon.log`

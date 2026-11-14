@@ -3,26 +3,44 @@ using System.Globalization;
 namespace EasyMic.Audio;
 
 /// <summary>
-/// Creates a virtual microphone with a null sink and a remap source. Audio that
-/// is written to the sink by <see cref="AudioPipeline"/> is available to other
-/// applications as <see cref="DisplayName"/>.
+/// Creates a virtual microphone as a PipeWire pipe source. Audio written to the
+/// FIFO by <see cref="AudioPipeline"/> is available to other applications as
+/// <see cref="DisplayName"/>. Unlike a null sink + remap source, a pipe source
+/// has no sink input, so screen-sharing applications cannot accidentally pick
+/// up the microphone as "application audio".
 /// </summary>
 public sealed class VirtualMic : IAsyncDisposable
 {
+    // Kept for cleaning up installations created by older EasyMic versions.
     public const string SinkName = "easymic_virtual";
-    public const string SourceName = "easymic_virtual_mic";
     public const string MonitorSource = SinkName + ".monitor";
+
+    public const string SourceName = "easymic_virtual_mic";
     public const string DisplayName = "EasyMic-Virtual-Mic";
 
-    private const string SinkDisplayName = "EasyMic-Virtual";
-
     private FileStream? _lock;
-    private int? _sinkModule;
     private int? _sourceModule;
 
     public bool IsAvailable { get; private set; }
 
     public string? LastError { get; private set; }
+
+    /// <summary>
+    /// FIFO read by the pipe-source module. The daemon writes processed PCM
+    /// samples into it.
+    /// </summary>
+    public static string PipePath
+    {
+        get
+        {
+            var runtime = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
+            var directory = string.IsNullOrWhiteSpace(runtime)
+                ? Path.GetTempPath()
+                : runtime;
+
+            return Path.Combine(directory, $"easymic-{Environment.UserName}.mic");
+        }
+    }
 
     public async Task<string?> StartAsync()
     {
@@ -41,36 +59,45 @@ public sealed class VirtualMic : IAsyncDisposable
         {
             await CleanupStaleModulesAsync().ConfigureAwait(false);
 
-            var sink = await Pactl.RunAsync(
-                "load-module",
-                "module-null-sink",
-                $"sink_name={SinkName}",
-                $"sink_properties=device.description={SinkDisplayName}").ConfigureAwait(false);
+            var fifo = PipePath;
+            TryDeletePipe(fifo);
 
-            if (sink.ExitCode != 0 ||
-                !int.TryParse(sink.StdOut.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var sinkModule))
+            var mkfifo = await ProcessRunner
+                .RunAsync("mkfifo", new[] { "-m", "0600", fifo })
+                .ConfigureAwait(false);
+
+            if (mkfifo.ExitCode != 0)
             {
-                return Fail($"Virtuelles Mikrofon konnte nicht erstellt werden: {FirstLine(sink.StdErr)}");
+                return Fail($"Virtuelles Mikrofon konnte nicht erstellt werden: {FirstLine(mkfifo.StdErr)}");
             }
-
-            _sinkModule = sinkModule;
 
             var source = await Pactl.RunAsync(
                 "load-module",
-                "module-remap-source",
-                $"master={MonitorSource}",
+                "module-pipe-source",
                 $"source_name={SourceName}",
+                $"file={fifo}",
+                "format=s16le",
+                $"rate={AudioProcessor.SampleRate}",
+                "channels=1",
                 $"source_properties=device.description={DisplayName}").ConfigureAwait(false);
 
             if (source.ExitCode != 0 ||
                 !int.TryParse(source.StdOut.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var sourceModule))
             {
-                await UnloadAsync(sinkModule).ConfigureAwait(false);
-                _sinkModule = null;
+                TryDeletePipe(fifo);
                 return Fail($"Virtuelles Mikrofon konnte nicht erstellt werden: {FirstLine(source.StdErr)}");
             }
 
             _sourceModule = sourceModule;
+
+            if (!await WaitForSourceAsync().ConfigureAwait(false))
+            {
+                await UnloadAsync(sourceModule).ConfigureAwait(false);
+                _sourceModule = null;
+                TryDeletePipe(fifo);
+                return Fail("Virtuelles Mikrofon wurde nicht rechtzeitig verfügbar.");
+            }
+
             IsAvailable = true;
             LastError = null;
             return null;
@@ -93,12 +120,7 @@ public sealed class VirtualMic : IAsyncDisposable
             await UnloadAsync(sourceModule.Value).ConfigureAwait(false);
         }
 
-        var sinkModule = _sinkModule;
-        _sinkModule = null;
-        if (sinkModule is not null)
-        {
-            await UnloadAsync(sinkModule.Value).ConfigureAwait(false);
-        }
+        TryDeletePipe(PipePath);
 
         IsAvailable = false;
         ReleaseLock();
@@ -107,6 +129,29 @@ public sealed class VirtualMic : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await StopAsync().ConfigureAwait(false);
+    }
+
+    private static async Task<bool> WaitForSourceAsync()
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var result = await Pactl.RunAsync("list", "short", "sources").ConfigureAwait(false);
+            if (result.ExitCode == 0)
+            {
+                foreach (var line in result.StdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var parts = line.Split('\t');
+                    if (parts.Length > 1 && parts[1] == SourceName)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            await Task.Delay(50).ConfigureAwait(false);
+        }
+
+        return false;
     }
 
     private string? AcquireLock()
@@ -182,7 +227,10 @@ public sealed class VirtualMic : IAsyncDisposable
 
         foreach (var module in modules.Where(module =>
                      module.Name == "module-loopback" &&
-                     LegacySinkNames.Any(sink => HasArgument(module.Arguments, $"source={sink}.monitor"))))
+                     (LegacySourceNames.Any(source =>
+                          HasArgument(module.Arguments, $"source={source}")) ||
+                      LegacySinkNames.Any(sink =>
+                          HasArgument(module.Arguments, $"source={sink}.monitor")))))
         {
             await UnloadAsync(module.Id).ConfigureAwait(false);
         }
@@ -195,8 +243,16 @@ public sealed class VirtualMic : IAsyncDisposable
 
         foreach (var module in modules)
         {
-            if (module.Name == "module-loopback" &&
-                LegacySinkNames.Any(sink => HasArgument(module.Arguments, $"source={sink}.monitor")))
+            if (module.Name == "module-pipe-source" &&
+                LegacySourceNames.Any(source => HasArgument(module.Arguments, $"source_name={source}")))
+            {
+                stale.Add((module.Id, 0));
+            }
+            else if (module.Name == "module-loopback" &&
+                     (LegacySourceNames.Any(source =>
+                          HasArgument(module.Arguments, $"source={source}")) ||
+                      LegacySinkNames.Any(sink =>
+                          HasArgument(module.Arguments, $"source={sink}.monitor"))))
             {
                 stale.Add((module.Id, 0));
             }
@@ -271,6 +327,21 @@ public sealed class VirtualMic : IAsyncDisposable
         => arguments
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(token, StringComparer.Ordinal);
+
+    private static void TryDeletePipe(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch
+        {
+            // Best effort.
+        }
+    }
 
     private string Fail(string message)
     {
