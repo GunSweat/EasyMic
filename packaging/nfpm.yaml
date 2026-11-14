@@ -6,7 +6,6 @@ release: "1"
 section: sound
 priority: optional
 maintainer: GunSweat <GunSweat@users.noreply.github.com>
-packager: GunSweat <GunSweat@users.noreply.github.com>
 description: |
   Linux microphone effect processor with noise gate, spectral denoise,
   pitch, volume, limiter and a virtual microphone.
