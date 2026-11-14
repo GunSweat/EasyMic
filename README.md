@@ -80,7 +80,8 @@ Bei jedem Release werden fertige Pakete erzeugt:
 | System | Datei | Installation |
 |--------|-------|--------------|
 | Debian/Ubuntu | `easymic_<version>_amd64.deb` | `sudo apt install ./easymic_<version>_amd64.deb` |
-| Fedora/RHEL/openSUSE | `easymic-<version>-1.x86_64.rpm` | `sudo dnf install ./easymic-<version>-1.x86_64.rpm` bzw. `sudo zypper install ./easymic-<version>-1.x86_64.rpm` |
+| Fedora/RHEL | `easymic-<version>-1.x86_64.rpm` | `sudo dnf install --nogpgcheck ./easymic-<version>-1.x86_64.rpm` |
+| openSUSE | `easymic-<version>-1.x86_64.rpm` | `sudo zypper --allow-unsigned-rpm install ./easymic-<version>-1.x86_64.rpm` |
 | Arch/Manjaro | `easymic-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U easymic-<version>-1-x86_64.pkg.tar.zst` |
 | beliebiges Linux | `easymic-<version>-linux-x64.tar.gz` | entpacken und Binaries/Unit manuell installieren |
 | Windows | `easymic-<version>-windows-x64.zip` | Kompilier-Build, siehe `README-Windows.txt` |
@@ -294,3 +295,7 @@ Das Skript legt den Tag `v1.2.3` an und pusht ihn. Der Release-Workflow baut
 dann `.deb`, `.rpm`, das Arch-Paket, den Linux-Tarball und die Windows-ZIP und
 lädt alles an das GitHub-Release. Alternativ lässt sich der Workflow manuell
 mit einer Version starten (Actions → Release → Run workflow).
+
+## Lizenz
+
+MIT – siehe [LICENSE](LICENSE).
