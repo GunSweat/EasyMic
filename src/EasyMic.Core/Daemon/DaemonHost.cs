@@ -43,6 +43,7 @@ public sealed class DaemonHost : IAsyncDisposable
     private DateTime _dirtyAt;
     private int _captureGeneration;
     private int _restartScheduled;
+    private int _sourceRetryScheduled;
 
     public Task Shutdown => _shutdown.Task;
 
@@ -264,8 +265,12 @@ public sealed class DaemonHost : IAsyncDisposable
 
                     _settings = (_settings with
                     {
-                        SourceDevice = sourcePinned ? _source?.Name : _settings.SourceDevice,
-                        SinkDevice = sinkPinned ? _sink?.Name : _settings.SinkDevice,
+                        SourceDevice = sourcePinned
+                            ? _source?.Name ?? _settings.SourceDevice
+                            : _settings.SourceDevice,
+                        SinkDevice = sinkPinned
+                            ? _sink?.Name ?? _settings.SinkDevice
+                            : _settings.SinkDevice,
                     }).Clamp();
                 }
             }
@@ -280,7 +285,8 @@ public sealed class DaemonHost : IAsyncDisposable
     {
         if (_source is null)
         {
-            SetNotice("Kein Mikrofon gefunden.", isError: true);
+            SetNotice("Kein Mikrofon gefunden – suche weiter ...", isError: true);
+            ScheduleSourceRetry();
             return;
         }
 
@@ -347,6 +353,69 @@ public sealed class DaemonHost : IAsyncDisposable
                 }
             });
         }
+    }
+
+    private void ScheduleSourceRetry()
+    {
+        if (Interlocked.CompareExchange(ref _sourceRetryScheduled, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var attempt = 0;
+
+                while (_cancellation?.IsCancellationRequested != true)
+                {
+                    // Poll quickly right after login, then back off so an
+                    // unplugged microphone does not cause constant process churn.
+                    var delay = attempt++ < 30 ? 2000 : 10000;
+                    await Task.Delay(delay, _cancellation?.Token ?? CancellationToken.None)
+                        .ConfigureAwait(false);
+
+                    var oldSink = _sink?.Name;
+                    await ResolveDevicesAsync(updateSettings: false).ConfigureAwait(false);
+
+                    // If the user pinned a source, wait for exactly that device
+                    // instead of silently capturing a different microphone.
+                    if (!string.IsNullOrWhiteSpace(_settings.SourceDevice) &&
+                        !string.Equals(_source?.Name, _settings.SourceDevice, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (_source is null)
+                    {
+                        continue;
+                    }
+
+                    if (!string.Equals(oldSink, _sink?.Name, StringComparison.Ordinal))
+                    {
+                        RecreateMonitor();
+                    }
+
+                    await StartCaptureAsync().ConfigureAwait(false);
+
+                    if (_capture is { IsRunning: true })
+                    {
+                        SetNotice(null, isError: false);
+                    }
+
+                    break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Shutdown.
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _sourceRetryScheduled, 0);
+            }
+        });
     }
 
     private void RecreateMonitor()
